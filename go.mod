@@ -1,4 +1,4 @@
-module github.com/huncoding/payment-processor-course
+module github.com/luizflm/payment-processor
 
 go 1.26.4
 
