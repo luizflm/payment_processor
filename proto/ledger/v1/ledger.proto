@@ -2,8 +2,120 @@ syntax = "proto3";
 
 package ledger.v1;
 
-option go_package = "github.com/huncoding/payment-processor-course/proto/gen/go/ledger/v1;ledgerv1";
+option go_package = "github.com/luizflm/payment-processor/proto/gen/go/ledger/v1;ledgerv1";
 
+// LedgerService owns money movement. Authorize is the only entry point
+// for creating charges and it is idempotent by client supplied key.
 service LedgerService {
-  // TODO: Define Ledger RPCs
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
+  rpc GetAccountHistory(GetAccountHistoryRequest) returns (GetAccountHistoryResponse);
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+  rpc DecideReview(DecideReviewRequest) returns (DecideReviewResponse);
+  rpc GetRecentPayments(GetRecentPaymentsRequest) returns (GetRecentPaymentsResponse);
 }
+
+message AuthorizeRequest {
+  string idempotency_key = 1;
+  string account_id = 2;
+  string card_fingerprint = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string client_ip = 6;
+  string merchant_category = 7;
+}
+
+message Review {
+  string payment_id = 1;
+  string status = 2;
+  string report = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string merchant_category = 6;
+  double risk_score = 7;
+  int64 created_at_unix_ms = 8;
+  int64 updated_at_unix_ms = 9;
+  string recommendation = 10;
+  string decision = 11;
+  string decided_by = 12;
+}
+
+message DecideReviewResponse {
+  string payment_id = 1;
+  string status = 2;
+  bool followed_recommendation = 3;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_APPROVED = 1;
+  PAYMENT_STATUS_DENIED = 2;
+  PAYMENT_STATUS_MANUAL_REVIEW = 3;
+}
+
+message AuthorizeResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  double risk_score = 3;
+  repeated string reasons = 4;
+
+  // Replayed is true when the idempotency key matched a previous
+  // request and stored response was returned unchanged.
+  bool replayed = 5;
+}
+
+message GetAccountHistoryRequest {
+  string account_id = 1;
+  int32 limit = 2;
+}
+
+message HistoryEntry {
+  string payment_id = 1;
+  int64 amount_cents = 2;
+  string currency = 3;
+  string status = 4;
+  string merchant_category = 5;
+  string client_ip = 6;
+  int64 occurred_at_unix_ms = 7;
+}
+
+message GetAccountHistoryResponse {
+  repeated HistoryEntry entries = 1;
+}
+
+message ListReviewsRequest {
+  // Optional filter: pending, investigating or resolved.
+  string status = 1;
+  int32 limit = 2;
+}
+
+message ListReviewsResponse {
+  repeated Review reviews = 1;
+}
+
+message DecideReviewRequest {
+  string payment_id = 1;
+  // approved or denied
+  string decision = 2;
+  string operator = 3;
+}
+
+message GetRecentPaymentsRequest {
+  int32 limit = 1;
+}
+
+message RecentPayment {
+  string payment_id = 1;
+  string account_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string status = 5;
+  double risk_score = 6;
+  repeated string reasons = 7;
+  string merchant_category = 8;
+  int64 created_at_unix_ms = 9;
+}
+
+message GetRecentPaymentsResponse {
+  repeated RecentPayment payments = 1;
+}
+
